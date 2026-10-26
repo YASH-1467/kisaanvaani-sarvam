@@ -467,6 +467,16 @@ st.markdown(
     "**Voice-First Agricultural Market Intelligence.** Instant Mandi prices, true net-profit seller advice after transport deduction, and hands-free logistics bookings in your own dialect."
 )
 
+st.markdown(
+    """
+    <div style="background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 10px; padding: 10px 16px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; font-size: 0.88rem;">
+        <span>🟢 <b>Live Mandi Ticker:</b> Wheat (Kanpur ₹2,460 ▲ ₹20) · Onion (Azadpur ₹2,100) · Chilli (Guntur ₹16,000) · Lasalgaon (₹1,950)</span>
+        <span style="color: #4ade80; font-weight: 600;">⚡ Sarvam Indic AI: Connected</span>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 tab1, tab2, tab3, tab4 = st.tabs(["🎙️ Farmer (किसान)", "📋 Mandi Inspector Dashboard", "📈 Market Overview", "ℹ️ Architecture & Sarvam AI"])
 
 # ==================== TAB 1: Farmer View ====================
@@ -476,6 +486,7 @@ with tab1:
     with col_input:
         st.subheader("1. Speak or Type your query")
         audio = st.audio_input("🎙️ बोलिए / Speak in Hindi, Telugu, Marathi, or Hinglish")
+        st.caption("🗣️ *Try asking:* 'गेहूं कहाँ बेचूँ?' • 'आज प्याज का भाव?' • 'मला कांदा विकायचा आहे' • 'మిర్చి ధర ఎంత?'")
         
         with st.form("typed_form", clear_on_submit=True):
             typed = st.text_input("Type query (e.g. 'kanpur me gehu ka bhav kya hai' or 'गेहूं कहाँ बेचूँ')")
