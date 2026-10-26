@@ -4,7 +4,13 @@ from dotenv import load_dotenv
 from rapidfuzz import process, fuzz
 
 load_dotenv()
-KEY = os.getenv("SARVAM_API_KEY") or st.secrets.get("SARVAM_API_KEY", "")
+KEY = os.getenv("SARVAM_API_KEY", "")
+if not KEY:
+    try:
+        KEY = st.secrets.get("SARVAM_API_KEY", "")
+    except Exception:
+        KEY = ""
+
 http = httpx.Client(
     base_url="https://api.sarvam.ai",
     headers={"api-subscription-key": KEY},
