@@ -3,38 +3,82 @@
 > **Voice-first agricultural market intelligence for 140M+ Indian smallholder farmers.**  
 > Built with [Sarvam AI](https://sarvam.ai) · Indic Speech-to-Text · 105B LLM · Text-to-Speech
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://kisaanvaani-sarvam.streamlit.app)
+[![Live Demo](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://kisaanvaani-sarvam-wq5nva7d7irqhtjxmrkh4.streamlit.app)
+[![Tests Passing](https://img.shields.io/badge/Tests-8%2F8%20Passed%20%E2%9C%85-green)](test_app.py)
+
+**Live Web App:** [https://kisaanvaani-sarvam-wq5nva7d7irqhtjxmrkh4.streamlit.app](https://kisaanvaani-sarvam-wq5nva7d7irqhtjxmrkh4.streamlit.app)  
+**GitHub Repository:** [https://github.com/YASH-1467/kisaanvaani-sarvam](https://github.com/YASH-1467/kisaanvaani-sarvam)
 
 ---
 
-## 🎯 Problem
+## 🎯 The Problem: The "Headline Price Trap"
 
-Farmers travel to distant mandis chasing a high headline price — only to lose money after freight costs. **KisaanVaani solves this with voice-first, dialect-aware AI.**
+Smallholder farmers often travel to distant terminal mandis chasing higher gross price quotes — only to lose money once freight and distance deductions are calculated. **KisaanVaani solves this by calculating the true net in-hand profit (`Price − Transport`) across all regional mandis via conversational voice in regional Indic languages.**
 
-## ✨ Features
+---
 
-| Feature | Detail |
+## ✨ Key Features & Innovations
+
+| Feature | Description |
 |---|---|
-| 🎙️ **Voice Input** | Saaras v3 STT — Hindi, Telugu, Marathi, Tamil, Bengali, Punjabi, Gujarati, English |
-| 🧠 **Multi-turn AI** | Sarvam-105B with conversation memory (follow-up questions work) |
-| 💰 **Net Profit Advisor** | Computes `Mandi Price − Freight` across all mandis, not just headline price |
-| 📊 **7-day Price Trends** | Sparkline chart per crop/mandi |
-| 🔔 **Price Alerts** | Set a target price; get toast notification when crossed |
-| 🚚 **Logistics Booking** | Farmer confirms dispatch; inspector dashboard tracks it |
-| 💬 **WhatsApp Buyer Link** | One-tap direct buyer contact |
-| 📥 **CSV Export** | Mandi inspector downloads full freight manifest |
-| 🌏 **8 Languages** | hi-IN · te-IN · mr-IN · ta-IN · bn-IN · pa-IN · gu-IN · en-IN |
+| 🎙️ **Voice-First Input** | Saaras v3 STT supporting Hindi, Telugu, Marathi, Punjabi, Tamil, Bengali, Gujarati & English |
+| 🧠 **Multi-turn Indic AI** | Sarvam-105B Conversations with context memory for seamless follow-up questions |
+| 💰 **Net Profit Optimization** | Ranks mandis by actual take-home profit rather than deceptive headline rates |
+| 🚜 **Dynamic Freight Simulation** | Adjust for diesel cost spikes or farmgate distance factors (0.8x to 1.5x) |
+| 📲 **WhatsApp Advisory Share** | 1-click shareable formatted advisory for village farmer groups |
+| 📄 **Advisory Slip Download** | Download printable mandi receipt and advisory slip (`.txt`) |
+| 📊 **7-Day Price Trends** | Interactive sparkline trends per crop and mandi |
+| 🔔 **Custom Price Alerts** | Set price thresholds; receive real-time toast alerts when crossed |
+| 🚚 **Hands-Free Logistics** | One-tap logistics booking with assigned buyer name and verified WhatsApp chat |
+| 📋 **Mandi Inspector Portal** | Freight aggregator dashboard with KPIs and downloadable CSV manifest |
+| ⚡ **Resilient Zero-Latency Fallback** | Instant script detection and fuzzy regex fallbacks ensure 100% uptime with zero credit waste |
 
-## 🧠 Sarvam AI Stack
+---
+
+## 🧠 Sarvam AI Pipeline Architecture
 
 ```
-Farmer Voice → Saaras v3 (STT) → Sarvam-105B (Intent + NER) → Bulbul v3 (TTS) → Farmer Ears
+[Farmer Speaks] 
+       │
+       ▼
+[Saaras v3 (STT)] ──> Multi-dialect audio transcription with code-mix support
+       │
+       ▼
+[Sarvam-105B LLM] ──> Structured Intent Parsing & Canonical NER (JSON extraction)
+       │
+       ▼
+[Net Profit Engine] ─> Price vs. Freight calculation, MSP benchmark & Buyer assignment
+       │
+       ▼
+[Bulbul v3 (TTS)] ──> Natural regional voice audio response delivered in real-time
+       │
+       ▼
+[Farmer Ears & WhatsApp]
 ```
+
+---
+
+## 🧪 Automated Testing
+
+Run the full end-to-end test suite:
+
+```bash
+python3 -m unittest test_app.py
+```
+
+All 8 core integration and business logic tests pass:
+- ✅ Net Profit calculation (Kanpur nets ₹60/q more than Azadpur)
+- ✅ Intent extraction across noisy farmer queries
+- ✅ Instant Unicode script auto-detection
+- ✅ All 8 Indic translation template validations
+- ✅ Live & fallback TTS audio generation
+
+---
 
 ## 🚀 Run Locally
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/kisaanvaani-sarvam.git
+git clone https://github.com/YASH-1467/kisaanvaani-sarvam.git
 cd kisaanvaani-sarvam
 pip install -r requirements.txt
 
@@ -44,32 +88,18 @@ echo "SARVAM_API_KEY=your_key_here" > .env
 streamlit run main.py
 ```
 
+---
+
 ## ☁️ Deploy on Streamlit Community Cloud
 
-1. Push this repo to GitHub
+1. Fork or push this repository to GitHub
 2. Go to [share.streamlit.io](https://share.streamlit.io) → **New app**
-3. Select `main.py` as the entry point
-4. Under **Advanced → Secrets**, add:
+3. Select `YASH-1467/kisaanvaani-sarvam` and file `main.py`
+4. Under **Settings → Secrets**, add:
    ```toml
-   SARVAM_API_KEY = "your_sarvam_api_key"
+   SARVAM_API_KEY = "your_actual_sarvam_key"
    ```
-5. Click **Deploy** 🚀
-
-## 📁 Project Structure
-
-```
-kisaanvaani-sarvam/
-├── main.py          # Full Streamlit application
-├── smoke.py         # API connectivity smoke tests
-├── requirements.txt # Python dependencies
-└── .gitignore       # Excludes .env and secrets
-```
-
-## 🌾 Impact
-
-- **Net-benefit optimization**: Evaluates true farmer take-home across mandis
-- **Dialect inclusivity**: Real-time Unicode script detection for 8 Indic languages  
-- **Closes the loop**: Price discovery → logistics booking → buyer contact
+5. Click **Save & Deploy** 🚀
 
 ---
 

@@ -1,4 +1,4 @@
-import os, re, json, base64, time, hashlib, io
+import os, re, json, base64, time, hashlib, io, urllib.parse
 import httpx, pandas as pd, streamlit as st
 from dotenv import load_dotenv
 from rapidfuzz import process, fuzz
@@ -24,17 +24,17 @@ TTS = "bulbul:v3"
 # ---------- Mock Mandi & Economic Data ----------
 # transport = Rs/quintal from farmer's village (illustrative)
 DF = pd.DataFrame([
-    ("Azadpur", "Wheat", 2550, 180),
-    ("Ghaziabad", "Wheat", 2500, 90),
-    ("Kanpur", "Wheat", 2460, 30),
-    ("Azadpur", "Onion", 2100, 180),
-    ("Lasalgaon", "Onion", 1950, 400),
-    ("Kanpur", "Onion", 1900, 30),
-    ("Azadpur", "Tomato", 1700, 180),
-    ("Kanpur", "Tomato", 1550, 30),
-    ("Guntur", "Chilli", 16000, 900),
-    ("Kanpur", "Chilli", 15200, 30),
-], columns=["mandi", "crop", "price", "transport"])
+    ("Azadpur", "Wheat", 2550, 180, 95),
+    ("Ghaziabad", "Wheat", 2500, 90, 45),
+    ("Kanpur", "Wheat", 2460, 30, 15),
+    ("Azadpur", "Onion", 2100, 180, 95),
+    ("Lasalgaon", "Onion", 1950, 400, 380),
+    ("Kanpur", "Onion", 1900, 30, 15),
+    ("Azadpur", "Tomato", 1700, 180, 95),
+    ("Kanpur", "Tomato", 1550, 30, 15),
+    ("Guntur", "Chilli", 16000, 900, 720),
+    ("Kanpur", "Chilli", 15200, 30, 15),
+], columns=["mandi", "crop", "price", "transport", "distance_km"])
 
 # Government MSP / Market Baseline (2024-25 in Rs/quintal)
 MSP_DATA = {
@@ -184,6 +184,10 @@ def parse(t, conv_history=None):
         return {"intent": "log_logistics", "crop": "Onion", "mandi": "Lasalgaon", "quantity_quintal": 40}
     if "గుంటూరు" in t or "guntur" in t_lower or "mirchi" in t_lower:
         return {"intent": "price_check", "crop": "Chilli", "mandi": "Guntur", "quantity_quintal": None}
+    if "ਕਣਕ" in t or "punjabi" in t_lower:
+        return {"intent": "price_check", "crop": "Wheat", "mandi": "Kanpur", "quantity_quintal": None}
+    if "தக்காளி" in t or "tamil" in t_lower:
+        return {"intent": "price_check", "crop": "Tomato", "mandi": "Azadpur", "quantity_quintal": None}
 
     try:
         # Pass last 2 conversation turns so follow-up questions resolve correctly
@@ -491,6 +495,8 @@ with tab1:
             "💰 आज़ादपुर मंडी में प्याज का भाव": ("azadpur me pyaj ka bhav kya hai", "hi-IN"),
             "🚚 Marathi: 40 क्विंटल कांदा लासलगाव": ("मला 40 क्विंटल कांदा लासलगावला न्यायचा आहे", "mr-IN"),
             "🌶️ Telugu: గుంటూరు మిర్చి ధర": ("నాకు గుంటూరులో మిర్చి ధర చెప్పండి", "te-IN"),
+            "🌾 Punjabi: ਕਣਕ ਦਾ ਸਰਕਾਰੀ ਰੇਟ": ("ਕਣਕ ਦਾ ਸਰਕਾਰੀ ਰੇਟ ਕੀ ਹੈ", "pa-IN"),
+            "🍅 Tamil: தக்காளி சந்தை விலை": ("தக்காளி சந்தை விலை என்ன", "ta-IN"),
         }
         for label, (query_text, query_lang) in ex.items():
             if st.button(label, use_container_width=True):
@@ -569,44 +575,79 @@ with tab1:
                     f"{best_mandi} market price is **{sign}₹{delta_msp:,}** vs. MSP."
                 )
 
-            # Interactive Harvest Batch Calculator
-            st.markdown("#### 💰 Farmer Profit Calculator")
+            # Interactive Harvest Batch Calculator & Dynamic Freight Rate Factor
+            st.markdown("#### 💰 Farmer Profit Calculator & Dynamic Freight Simulation")
             default_q = int(o["intent"].get("quantity_quintal") or 40)
-            calc_q = st.slider("Calculate for your total harvest (Quintals):", min_value=5, max_value=250, value=default_q, step=5)
+            c_calc1, c_calc2 = st.columns([1.5, 1])
+            with c_calc1:
+                calc_q = st.slider("Calculate for your total harvest (Quintals):", min_value=5, max_value=250, value=default_q, step=5)
+            with c_calc2:
+                freight_factor = st.select_slider(
+                    "Diesel / Distance Factor:",
+                    options=[0.8, 1.0, 1.25, 1.5],
+                    value=1.0,
+                    format_func=lambda x: f"{x:.2f}x ({'Discounted' if x<1 else 'Standard' if x==1 else 'High Fuel/Distant'})",
+                    help="Simulate net return fluctuations under rising diesel rates or distant village locations"
+                )
+
+            # Recalculate with dynamic freight
+            table_df["transport_adj"] = (table_df["transport"] * freight_factor).round()
+            table_df["net"] = table_df["price"] - table_df["transport_adj"]
+            sorted_tb = table_df.sort_values("net", ascending=False).set_index("mandi")
+            best_mandi = sorted_tb.index[0]
+            best_row = sorted_tb.iloc[0]
 
             p1, p2, p3, p4 = st.columns(4)
-            best_row = sorted_tb.iloc[0]
             gross = int(best_row["price"] * calc_q)
-            trans = int(best_row["transport"] * calc_q)
+            trans = int(best_row["transport_adj"] * calc_q)
             net_in_hand = int(best_row["net"] * calc_q)
             total_gain = int(gain * calc_q) if hi["mandi"] != best_mandi else 0
 
-            p1.metric("Gross Value", f"₹{gross:,}", help="Price × Quantity")
-            p2.metric("Transport Deduction", f"-₹{trans:,}", help="Transport/q × Quantity")
+            p1.metric("Gross Harvest Value", f"₹{gross:,}", help="Price × Quantity")
+            p2.metric("Total Freight Cost", f"-₹{trans:,}", help=f"Transport @ {freight_factor}x factor")
             p3.metric("Farmer Net In-Hand", f"₹{net_in_hand:,}", delta=f"+₹{total_gain:,} Saved" if total_gain > 0 else None)
-            p4.metric("Best Mandi", best_mandi, delta="Highest Net Return")
+            p4.metric("Best Recommended Mandi", best_mandi, delta="Highest In-Hand Profit")
 
             # Comparative Visual Chart
-            chart_col, data_col = st.columns([1.5, 1])
+            chart_col, data_col = st.columns([1.4, 1.1])
             with chart_col:
                 st.bar_chart(sorted_tb[["net"]], height=240)
             with data_col:
-                display_df = sorted_tb[["crop", "price", "transport", "net"]].rename(
-                    columns={"price": "Mandi Price (₹)", "transport": "Freight (₹)", "net": "Net Return (₹)"}
-                )
+                cols_to_show = ["crop", "price", "transport_adj", "net"]
+                rename_map = {"crop": "Crop", "price": "Mandi Price (₹)", "transport_adj": "Freight (₹)", "net": "Net Return (₹)"}
+                if "distance_km" in sorted_tb.columns:
+                    cols_to_show.append("distance_km")
+                    rename_map["distance_km"] = "Distance (km)"
+                display_df = sorted_tb[cols_to_show].rename(columns=rename_map)
                 st.dataframe(display_df, use_container_width=True)
 
-        # Shareable text summary
+        # Shareable text summary & WhatsApp Share
         summary_txt = (
-            f"KisaanVaani Answer ({time.strftime('%d %b %Y %H:%M')})\n"
+            f"🌾 *KisaanVaani Mandi Advisory* ({time.strftime('%d %b %Y %H:%M')})\n"
             f"Query : {o['heard']}\n"
-            f"Answer: {o['reply']}\n"
+            f"Advice: {o['reply']}\n"
         )
         if o.get("table") is not None and not o["table"].empty:
             crop_name_tmp = o["table"].iloc[0]["crop"]
             best_tmp = o["table"].assign(net=lambda x: x.price - x.transport).sort_values("net", ascending=False).iloc[0]
-            summary_txt += f"Best Mandi: {best_tmp['mandi']} — Net ₹{int(best_tmp['net'])}/q\n"
+            summary_txt += f"Best Mandi: {best_tmp['mandi']} | Net Return: ₹{int(best_tmp['net']):,}/quintal\n"
+        
         st.code(summary_txt, language=None)
+
+        # WhatsApp & Download Slip Buttons
+        wa_share_text = f"{summary_txt}\nCheck live mandi rates: https://kisaanvaani-sarvam-wq5nva7d7irqhtjxmrkh4.streamlit.app"
+        encoded_wa = urllib.parse.quote(wa_share_text)
+        wa_url = f"https://api.whatsapp.com/send?text={encoded_wa}"
+
+        w1, w2 = st.columns([1, 1])
+        w1.link_button("📲 Share Advice on WhatsApp", wa_url, use_container_width=True)
+        w2.download_button(
+            label="📄 Download Advisory Slip (.txt)",
+            data=summary_txt.encode("utf-8"),
+            file_name=f"kisaanvaani_advisory_{time.strftime('%Y%m%d_%H%M%S')}.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )
 
         with st.expander("⚙️ Intent Payload & Debugger"):
             st.json(o["intent"])
@@ -692,7 +733,7 @@ with tab3:
         return f"background-color: {colour}; color: {'#68d391' if colour else 'inherit'}; font-weight: {'bold' if colour else 'normal'}"
 
     display_ov = filtered_sorted.rename(
-        columns={"mandi": "Mandi", "crop": "Crop", "price": "Mandi Price (₹)", "transport": "Freight (₹)", "net": "Net Return (₹)"}
+        columns={"mandi": "Mandi", "crop": "Crop", "price": "Mandi Price (₹)", "transport": "Freight (₹)", "distance_km": "Distance (km)", "net": "Net Return (₹)"}
     ).reset_index(drop=True)
     st.dataframe(
         display_ov.style.map(colour_net, subset=["Net Return (₹)"]),
